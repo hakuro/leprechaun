@@ -1,6 +1,5 @@
 leprechaun
 ==========
-# leprechaun
 
 FIXME
 
