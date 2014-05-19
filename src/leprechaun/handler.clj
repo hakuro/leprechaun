@@ -7,7 +7,12 @@
             [taoensso.timbre :as timbre]
             [taoensso.timbre.appenders.rotor :as rotor]
             [selmer.parser :as parser]
-            [environ.core :refer [env]]))
+            [environ.core :refer [env]]
+            [clojurewerkz.quartzite.scheduler :as qs]
+            [clojurewerkz.quartzite.triggers :as t]
+            [clojurewerkz.quartzite.jobs :as j]
+            [clojurewerkz.quartzite.jobs :refer [defjob]]
+            [clojurewerkz.quartzite.schedule.cron :refer [schedule cron-schedule]]))
 
 (defroutes app-routes
   (route/resources "/")
@@ -32,7 +37,18 @@
     {:path "leprechaun.log" :max-size (* 512 1024) :backlog 10})
 
   (if (env :dev) (parser/cache-off!))
-  (timbre/info "leprechaun started successfully"))
+  (timbre/info "leprechaun started successfully")
+  (qs/initialize)
+  (qs/start)
+  (let [job (j/build
+             (j/of-type NoOpJob)
+             (j/with-identity (j/key "jobs.noop.1")))
+        trigger (t/build
+                 (t/with-identity (t/key "triggers.1"))
+                 (t/start-now)
+                 (t/with-schedule (schedule 
+                                   (cron-schedule "0 50 0 * * ?"))))]
+    (qs/schedule job trigger)))
 
 (defn destroy
   "destroy will be called when your application
